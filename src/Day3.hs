@@ -1,33 +1,20 @@
 module Main where
 
 import Data.Monoid ((<>))
-import qualified Data.Set as S
 
 data Direction = U | L | D | R
-type Position = (Int, Int)
+data Position = P !Int !Int deriving (Eq, Show)
 
-data Grid = Grid
-    { current :: Position
-    , direction :: Direction
-    , seen :: S.Set Position
-    }
-
--- Make sure to use the Down initial position. This will make sure the first one
--- testes is the position to the Right
 positionOf :: Int -> Position
-positionOf p = current $ (iterate next $ Grid (0, 0) D (S.singleton (0, 0)) ) !! (p - 1)
+positionOf p = positions !! (p - 1)
+
+positions :: [Position]
+positions = scanl (\p dir -> move dir p) (P 0 0) base
   where
-    next :: Grid -> Grid
-    next g = if current (moveNext g) `S.notMember` seen g
-        -- Update the direction and move. If not seen store it and move on
-        then let mn = moveNext g
-              in mn { seen = S.insert (current mn) (seen g) }
-        -- Can't turn and move. Move without changing direction. Add to seen
-        else let mp = move (direction g) (current g)
-              in g { current = mp, seen = S.insert mp (seen g) }
-    moveNext :: Grid -> Grid
-    moveNext gg = let newPosition = move (nextDirection $ direction gg) $ current gg
-                   in gg { current = newPosition, direction = nextDirection $ direction gg }
+    -- Build the direction list. [R, U, L, L, D, D, R, R, R, ...]
+    base :: [Direction]
+    base = concat [ replicate n d 
+                  | (d, n) <- cycle [R, U, L, D] `zip` concatMap (\x -> [x,x]) [1..] ]
 
 nextDirection :: Direction -> Direction
 nextDirection U = L
@@ -36,15 +23,15 @@ nextDirection D = R
 nextDirection R = U
 
 move :: Direction -> Position -> Position
-move U (x, y) = (x, y + 1)
-move L (x, y) = (x - 1, y)
-move D (x, y) = (x, y - 1)
-move R (x, y) = (x + 1, y)
+move U (P x y) = P x (y + 1)
+move L (P x y) = P (x - 1) y
+move D (P x y) = P x (y - 1)
+move R (P x y) = P (x + 1) y
 
 main :: IO ()
 main = do
     input <- destination
-    let (x, y) = positionOf input
+    let (P x y) = positionOf input
     putStrLn $ "Length to position " <> show input <> ": " <> show (abs x + abs y)
   where
     destination :: IO Int
