@@ -1,17 +1,19 @@
 module Main where
 
-import qualified Data.Sequence as S
+import qualified Data.Vector.Unboxed as V
+import qualified Data.Vector.Unboxed.Mutable as M
 import Text.Parsec
 import Text.Parsec.String (Parser, parseFromFile)
 
-walk :: (Int -> Int) -> [Int] -> Int
-walk f xs = next 0 0 (S.fromList xs)
+walk :: (Int -> Int) -> [Int] -> IO Int
+walk f xs = next 0 0 =<< V.thaw (V.fromList xs)
   where
-    next steps i seq
-        | i < 0 || i >= S.length seq = steps
-        | otherwise =
-            let d = S.index seq i
-             in next (steps + 1) (i + d) (S.update i (f d) seq)
+    next steps i vect 
+        | i < 0 || i >= M.length vect = return $! steps
+        | otherwise = do
+            d <- M.read vect i
+            M.write vect i (f d)
+            next (steps + 1) (i + d) vect
 
 parser :: Parser [Int]
 parser = many1 (numbers <* newline) <* eof
@@ -30,5 +32,7 @@ withData file p = do
 main :: IO ()
 main = do
     withData "input/Day5.txt" parser >>= \input -> do
-        putStrLn $ "Solution 1: " ++ show (walk (+ 1) input)
-        putStrLn $ "Solution 2: " ++ show (walk (\i -> if i >= 3 then i - 1 else i + 1 ) input)
+        res1 <- walk (+ 1) input
+        putStrLn $ "Solution 1: " ++ show res1
+        res2 <- walk (\i -> if i >= 3 then i - 1 else i + 1 ) input
+        putStrLn $ "Solution 2: " ++ show res2
