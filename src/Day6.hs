@@ -9,14 +9,12 @@ cycles :: [Int] -> Int
 cycles xs = next 1 (V.fromList xs) (Set.singleton $ V.fromList xs)
    where
      next :: Int -> V.Vector Int -> Set.Set (V.Vector Int) -> Int
-     next i ds mem = case V.elemIndex (V.maximum ds) ds of
-        Nothing -> error "No index found"
-        Just pos -> do
-            -- Update the list and then redistribute it
-            let ns = redistribute pos (maximum ds) $ ds V.// [(pos, 0)]
-            if Set.member ns mem
-                then i
-                else next (i + 1) ns (Set.insert ns mem)
+     next i ds mem = if Set.member nv mem
+        then i
+        else next (i + 1) nv (Set.insert nv mem)
+      where
+        maxInt = V.maxIndex ds
+        nv = redistribute maxInt (ds V.! maxInt) (ds V.// [(maxInt, 0)])
 
 -- Redistribute the set starting at index `i`, adding 1 to all positions
 -- wrapping around the set
